@@ -12,11 +12,10 @@ scaler = joblib.load("scaler.pkl")
 # ==========================================================
 # LOAD AUDIO FILE
 # ==========================================================
-audio_path = "test.wav"   # Change if your file has a different name
+audio_path = "test.wav"      # Change this to your test audio
 
 audio, sr = librosa.load(audio_path, sr=16000, res_type="kaiser_fast")
-
-# Add tiny noise (same as training)
+# Add small noise like in training (for stability)
 audio = audio + np.random.normal(0, 1e-6, size=audio.shape)
 
 print("Audio Loaded Successfully")
@@ -55,6 +54,7 @@ for i in range(0, len(audio) - frame_length, hop_length):
 if len(lpc_features) == 0:
     lpc_mean = np.zeros(lpc_order + 1)
 else:
+    lpc_features = np.array(lpc_features)
     lpc_mean = np.mean(lpc_features, axis=0)
 
 # ==========================================================
@@ -63,8 +63,8 @@ else:
 try:
     plp_features = plp(audio, fs=sr, order=13)
     plp_mean = np.mean(plp_features, axis=0)
-except Exception:
-    print("PLP extraction failed. Using zeros instead.")
+except Exception as e:
+    print("PLP extraction failed:", e)
     plp_mean = np.zeros(13)
 
 # ==========================================================
@@ -78,8 +78,6 @@ combined = np.concatenate([
 
 combined = combined.reshape(1, -1)
 
-print("Combined Feature Shape:", combined.shape)
-
 # ==========================================================
 # SCALE FEATURES
 # ==========================================================
@@ -90,6 +88,10 @@ combined = scaler.transform(combined)
 # ==========================================================
 prediction = model.predict(combined)
 
-print("\n====================================")
-print("Predicted Speaker :", prediction[0])
-print("====================================")
+# Extract numeric speaker ID from prediction
+speaker_str = str(prediction[0]).replace('Speaker', '').replace('_', '')
+speaker_id = int(speaker_str)
+
+print("\n===================================")
+print(f"Speaker {speaker_id}")
+print("===================================")
